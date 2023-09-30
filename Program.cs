@@ -7,7 +7,12 @@ var host = Host.CreateDefaultBuilder(args)
     {
         services.AddOptions<SourceSettings>()
             .BindConfiguration(SourceSettings.Section)
-            .Validate(settings => IPAddress.TryParse(settings.LocalIp, out _), "Incorrect source IP address")
+            .Validate(
+                settings =>
+                {
+                    return IPAddress.TryParse(settings.LocalIp, out _) &&
+                           settings.Port is > IPEndPoint.MinPort and < IPEndPoint.MaxPort;
+                }, "Incorrect source IP address")
             .ValidateOnStart();
 
         services.AddOptions<DestinationsSettings>()
