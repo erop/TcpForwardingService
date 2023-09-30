@@ -27,10 +27,11 @@ public class Worker : BackgroundService
                 var endpoint = new IPEndPoint(IPAddress.Parse(_sourceSettings.LocalIp), _sourceSettings.Port);
                 var listener = new TcpListener(endpoint);
                 listener.Start();
+                _logger.LogInformation("Start listening on endpoint: {Endpoint}", endpoint.ToString());
 
                 while (!stoppingToken.IsCancellationRequested)
                 {
-                    _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                    _logger.LogInformation("Worker running at: {Time}", DateTimeOffset.Now);
                     await Task.Delay(1000, stoppingToken);
                 }
             }
