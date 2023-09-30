@@ -37,6 +37,7 @@ public class Worker : BackgroundService
             }
             catch (OperationCanceledException)
             {
+                break;
             }
             catch (SocketException e)
             {
