@@ -8,6 +8,7 @@ namespace TcpForwardingService;
 public class Worker : BackgroundService
 {
     private readonly DestinationsSettings _destinationsSettings;
+    private readonly TcpListener _listener;
     private readonly ILogger<Worker> _logger;
     private readonly SourceSettings _sourceSettings;
 
@@ -17,6 +18,7 @@ public class Worker : BackgroundService
         _logger = logger;
         _sourceSettings = sourceSettings.Value;
         _destinationsSettings = destinationsSettings.Value;
+        _listener = new TcpListener(new IPEndPoint(IPAddress.Parse(_sourceSettings.LocalIp), _sourceSettings.Port));
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -24,10 +26,8 @@ public class Worker : BackgroundService
         while (true)
             try
             {
-                var endpoint = new IPEndPoint(IPAddress.Parse(_sourceSettings.LocalIp), _sourceSettings.Port);
-                var listener = new TcpListener(endpoint);
-                listener.Start();
-                _logger.LogInformation("Start listening on endpoint: {Endpoint}", endpoint.ToString());
+                _listener.Start();
+                _logger.LogInformation("Start listening on endpoint: {Endpoint}", _listener.LocalEndpoint.ToString());
 
                 while (!stoppingToken.IsCancellationRequested)
                 {
@@ -49,5 +49,11 @@ public class Worker : BackgroundService
                 _logger.LogError(e, "Unexpected error occurred: {Message}", e.Message);
                 await Task.Delay(1000, stoppingToken);
             }
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken)
+    {
+        _listener.Stop();
+        return base.StopAsync(cancellationToken);
     }
 }
