@@ -8,11 +8,8 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddOptions<SourceSettings>()
             .BindConfiguration(SourceSettings.Section)
             .Validate(
-                settings =>
-                {
-                    return IPAddress.TryParse(settings.LocalIp, out _) &&
-                           settings.Port is > IPEndPoint.MinPort and < IPEndPoint.MaxPort;
-                }, "Incorrect source IP address")
+                settings => IPAddress.TryParse(settings.LocalIp, out _) &&
+                            IsAllowedPort(settings.Port), "Incorrect source IP:PORT endpoint")
             .ValidateOnStart();
 
         services.AddOptions<DestinationsSettings>()
@@ -20,8 +17,9 @@ var host = Host.CreateDefaultBuilder(args)
             .Validate(
                 settings =>
                 {
-                    return settings.Destinations.TrueForAll(hostPort => IPAddress.TryParse(hostPort.Host, out _));
-                }, "Check destination IP addresses!")
+                    return settings.Destinations.TrueForAll(hostPort =>
+                        IPAddress.TryParse(hostPort.Host, out _) && IsAllowedPort(hostPort.Port));
+                }, "Check destination IP:PORT endpoints!")
             .ValidateOnStart();
 
         services.AddHostedService<Worker>();
@@ -29,3 +27,9 @@ var host = Host.CreateDefaultBuilder(args)
     .Build();
 
 host.Run();
+return;
+
+bool IsAllowedPort(int port)
+{
+    return port is > IPEndPoint.MinPort and < IPEndPoint.MaxPort;
+}
