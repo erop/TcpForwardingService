@@ -23,6 +23,8 @@ var host = Host.CreateDefaultBuilder(args)
             .ValidateOnStart();
 
         services.AddHostedService<Worker>();
+
+        services.AddWindowsService(options => options.ServiceName = "TcpForwardingService");
     })
     .Build();
 
