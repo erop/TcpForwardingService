@@ -68,6 +68,7 @@ public class Worker : BackgroundService
                 {
                     var dstEndPoint = new IPEndPoint(IPAddress.Parse(hostPort.Host), hostPort.Port);
                     using var dstClient = new TcpClient(dstEndPoint);
+                    // todo analyze proper usage of Disposables
                 }
             }
         }
