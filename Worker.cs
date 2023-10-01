@@ -32,7 +32,7 @@ public class Worker : BackgroundService
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     var client = await _listener.AcceptTcpClientAsync(stoppingToken);
-                    ForwardAsync(client, stoppingToken);
+                    _ = ForwardAsync(client, stoppingToken);
 
 
                     _logger.LogInformation("Worker running at: {Time}", DateTimeOffset.Now);
@@ -59,16 +59,33 @@ public class Worker : BackgroundService
     {
         try
         {
-            var reader = new StreamReader(client.GetStream());
-
-            while (await reader.ReadLineAsync(stoppingToken) is { } message)
+            using (client)
             {
-                _logger.LogInformation("[{Time}] Message: {Message}", DateTimeOffset.Now.ToString("u"), message);
-                foreach (var hostPort in _destinationsSettings.Destinations)
+                var reader = new StreamReader(client.GetStream());
+
+                while (await reader.ReadLineAsync(stoppingToken) is { } message)
                 {
-                    var dstEndPoint = new IPEndPoint(IPAddress.Parse(hostPort.Host), hostPort.Port);
-                    using var dstClient = new TcpClient(dstEndPoint);
-                    // todo analyze proper usage of Disposables
+                    _logger.LogInformation("[{Time}] Message: {Message}", DateTimeOffset.Now.ToString("u"), message);
+                    foreach (var hostPort in _destinationsSettings.Destinations)
+                        try
+                        {
+                            using var dstClient = new TcpClient();
+                            await dstClient.ConnectAsync(hostPort.Host, hostPort.Port, stoppingToken);
+                            using var dstStream = dstClient.GetStream();
+                            using var writer = new StreamWriter(dstStream);
+                            await writer.WriteLineAsync(message);
+                            await writer.FlushAsync();
+                        }
+                        catch (Exception e) when (e is SocketException or ObjectDisposedException
+                                                      or InvalidOperationException)
+                        {
+                            _logger.LogError("Unable to forwarding message: {Message}", e.Message);
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogCritical("Unexpected error occurred while forwarding message: {Message}",
+                                e.Message);
+                        }
                 }
             }
         }
