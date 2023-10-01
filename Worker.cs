@@ -79,7 +79,8 @@ public class Worker : BackgroundService
                         catch (Exception e) when (e is SocketException or ObjectDisposedException
                                                       or InvalidOperationException)
                         {
-                            _logger.LogError("Unable to forwarding message: {Message}", e.Message);
+                            _logger.LogError("Unable to forward message: '{Message}' to destination '{Destination}'",
+                                e.Message, hostPort.ToString());
                         }
                         catch (Exception e)
                         {
