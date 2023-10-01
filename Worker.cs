@@ -31,6 +31,10 @@ public class Worker : BackgroundService
 
                 while (!stoppingToken.IsCancellationRequested)
                 {
+                    var client = await _listener.AcceptTcpClientAsync(stoppingToken);
+                    ForwardAsync(client, stoppingToken);
+
+
                     _logger.LogInformation("Worker running at: {Time}", DateTimeOffset.Now);
                     await Task.Delay(1000, stoppingToken);
                 }
@@ -49,6 +53,28 @@ public class Worker : BackgroundService
                 _logger.LogError(e, "Unexpected error occurred: {Message}", e.Message);
                 await Task.Delay(1000, stoppingToken);
             }
+    }
+
+    private async Task ForwardAsync(TcpClient client, CancellationToken stoppingToken)
+    {
+        try
+        {
+            var reader = new StreamReader(client.GetStream());
+
+            while (await reader.ReadLineAsync(stoppingToken) is { } message)
+            {
+                _logger.LogInformation("[{Time}] Message: {Message}", DateTimeOffset.Now.ToString("u"), message);
+                foreach (var hostPort in _destinationsSettings.Destinations)
+                {
+                    var dstEndPoint = new IPEndPoint(IPAddress.Parse(hostPort.Host), hostPort.Port);
+                    using var dstClient = new TcpClient(dstEndPoint);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("Unable to forward: {Message}", e.Message);
+        }
     }
 
     public override Task StopAsync(CancellationToken cancellationToken)
