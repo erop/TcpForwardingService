@@ -1,3 +1,4 @@
+- implement TCP connection pool
 - add Serilog
 - add Slack serilog sink
 - use events to be caught by logging
