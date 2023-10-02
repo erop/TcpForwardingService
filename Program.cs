@@ -24,6 +24,8 @@ var host = Host.CreateDefaultBuilder(args)
 
         services.AddHostedService<Worker>();
 
+        services.AddSingleton<TcpWritersPool>();
+
         services.AddWindowsService(options => options.ServiceName = "TcpForwardingService");
     })
     .Build();
