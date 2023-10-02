@@ -3,11 +3,13 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Options;
 using TcpForwardingService.Configuration;
+using Exception = System.Exception;
 
 namespace TcpForwardingService;
 
 public class TcpWritersPool : IDisposable
 {
+    private readonly Dictionary<IPEndPoint, TcpClient?> _clients = new();
     private readonly ILogger<TcpWritersPool> _logger;
     private readonly DestinationsSettings _settings;
     private readonly Dictionary<IPEndPoint, StreamWriter?> _writers = new();
@@ -33,7 +35,11 @@ public class TcpWritersPool : IDisposable
 
     public void Dispose()
     {
-        // TODO release managed resources here
+        foreach (var item in _writers)
+        {
+            item.Value?.Dispose();
+            _clients[item.Key]?.Dispose();
+        }
     }
 
     public ReadOnlyDictionary<IPEndPoint, StreamWriter?> GetWriters()
@@ -44,9 +50,10 @@ public class TcpWritersPool : IDisposable
     public void AddWriter(IPEndPoint ipEndPoint)
     {
         StreamWriter? writer = null;
+        TcpClient? client = null;
         try
         {
-            var client = new TcpClient();
+            client = new TcpClient();
             client.Connect(ipEndPoint);
             writer = new StreamWriter(client.GetStream());
         }
@@ -56,6 +63,7 @@ public class TcpWritersPool : IDisposable
                 ipEndPoint.ToString(), e.Message);
         }
 
+        _clients[ipEndPoint] = client;
         _writers[ipEndPoint] = writer;
     }
 }
