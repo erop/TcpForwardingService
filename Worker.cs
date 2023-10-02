@@ -11,11 +11,13 @@ public class Worker : BackgroundService
     private readonly TcpListener _listener;
     private readonly ILogger<Worker> _logger;
     private readonly SourceSettings _sourceSettings;
+    private readonly TcpWritersPool _writersPool;
 
     public Worker(ILogger<Worker> logger, IOptions<SourceSettings> sourceSettings,
-        IOptions<DestinationsSettings> destinationsSettings)
+        IOptions<DestinationsSettings> destinationsSettings, TcpWritersPool writersPool)
     {
         _logger = logger;
+        _writersPool = writersPool;
         _sourceSettings = sourceSettings.Value;
         _destinationsSettings = destinationsSettings.Value;
         _listener = new TcpListener(new IPEndPoint(IPAddress.Parse(_sourceSettings.LocalIp), _sourceSettings.Port));
@@ -66,26 +68,33 @@ public class Worker : BackgroundService
                 while (await reader.ReadLineAsync(stoppingToken) is { } message)
                 {
                     _logger.LogInformation("[{Time}] Message: {Message}", DateTimeOffset.Now.ToString("u"), message);
-                    foreach (var hostPort in _destinationsSettings.Destinations)
-                        try
+                    foreach (var (key, writer) in _writersPool.GetWriters())
+                        if (writer is not null)
                         {
-                            using var dstClient = new TcpClient();
-                            await dstClient.ConnectAsync(hostPort.Host, hostPort.Port, stoppingToken);
-                            using var dstStream = dstClient.GetStream();
-                            using var writer = new StreamWriter(dstStream);
-                            await writer.WriteLineAsync(message);
-                            await writer.FlushAsync();
+                            try
+                            {
+                                await writer.WriteLineAsync(message);
+                                await writer.FlushAsync();
+                            }
+                            catch (Exception e) when (e is SocketException or ObjectDisposedException
+                                                          or InvalidOperationException)
+                            {
+                                _logger.LogError(
+                                    "Unable to forward message: '{Message}' to destination '{Destination}'",
+                                    e.Message, key.ToString());
+                                ReEstablishConnection(key);
+                            }
+                            catch (Exception e)
+                            {
+                                _logger.LogCritical("Unexpected error occurred while forwarding message: {Message}",
+                                    e.Message);
+                                ReEstablishConnection(key);
+                            }
                         }
-                        catch (Exception e) when (e is SocketException or ObjectDisposedException
-                                                      or InvalidOperationException)
+                        else
                         {
-                            _logger.LogError("Unable to forward message: '{Message}' to destination '{Destination}'",
-                                e.Message, hostPort.ToString());
-                        }
-                        catch (Exception e)
-                        {
-                            _logger.LogCritical("Unexpected error occurred while forwarding message: {Message}",
-                                e.Message);
+                            _logger.LogError("No available connection for endpoint '{Endpoint}'", key.ToString());
+                            ReEstablishConnection(key);
                         }
                 }
             }
@@ -96,9 +105,15 @@ public class Worker : BackgroundService
         }
     }
 
+    private void ReEstablishConnection(IPEndPoint ipEndPoint)
+    {
+        Task.Run(() => _writersPool.AddWriter(ipEndPoint)).ConfigureAwait(false);
+    }
+
     public override Task StopAsync(CancellationToken cancellationToken)
     {
         _listener.Stop();
+        _writersPool.Dispose();
         return base.StopAsync(cancellationToken);
     }
 }

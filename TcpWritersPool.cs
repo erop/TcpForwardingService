@@ -6,11 +6,11 @@ using TcpForwardingService.Configuration;
 
 namespace TcpForwardingService;
 
-public class TcpWritersPool: IDisposable
+public class TcpWritersPool : IDisposable
 {
     private readonly ILogger<TcpWritersPool> _logger;
     private readonly DestinationsSettings _settings;
-    private Dictionary<IPEndPoint, StreamWriter?> _writers;
+    private readonly Dictionary<IPEndPoint, StreamWriter?> _writers = new();
 
     public TcpWritersPool(IOptions<DestinationsSettings> options, ILogger<TcpWritersPool> logger)
     {
@@ -31,6 +31,11 @@ public class TcpWritersPool: IDisposable
             }
     }
 
+    public void Dispose()
+    {
+        // TODO release managed resources here
+    }
+
     public ReadOnlyDictionary<IPEndPoint, StreamWriter?> GetWriters()
     {
         return _writers.AsReadOnly();
@@ -38,22 +43,19 @@ public class TcpWritersPool: IDisposable
 
     public void AddWriter(IPEndPoint ipEndPoint)
     {
+        StreamWriter? writer = null;
         try
         {
             var client = new TcpClient();
             client.Connect(ipEndPoint);
-            _writers.Add(ipEndPoint, new StreamWriter(client.GetStream()));
+            writer = new StreamWriter(client.GetStream());
         }
         catch (Exception e)
         {
             _logger.LogError("Unable to create writer for destination: '{Endpoint}', Error: '{Error}'",
                 ipEndPoint.ToString(), e.Message);
-            _writers.Add(ipEndPoint, null);
         }
-    }
 
-    public void Dispose()
-    {
-        // TODO release managed resources here
+        _writers[ipEndPoint] = writer;
     }
 }
