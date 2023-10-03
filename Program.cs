@@ -1,4 +1,6 @@
 using System.Net;
+using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 using TcpForwardingService;
 using TcpForwardingService.Configuration;
 
@@ -29,10 +31,15 @@ var host = Host.CreateDefaultBuilder(args)
             .ValidateOnStart();
 
         services.AddHostedService<Worker>();
-
+        services.AddWindowsService(options => options.ServiceName = "TcpForwardingService");
+        
+        services.AddSingleton<IConnectionMultiplexer>(sp =>
+        {
+            var settings = sp.GetRequiredService<IOptions<RedisStreamSinkSettings>>().Value;
+            return ConnectionMultiplexer.Connect(settings.ConnectionString);
+        });
         services.AddSingleton<TcpWritersPool>();
 
-        services.AddWindowsService(options => options.ServiceName = "TcpForwardingService");
     })
     .Build();
 
