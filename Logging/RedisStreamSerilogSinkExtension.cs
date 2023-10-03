@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Configuration;
 using StackExchange.Redis;
@@ -8,9 +9,8 @@ namespace TcpForwardingService.Logging;
 public static class RedisStreamSerilogSinkExtension
 {
     public static LoggerConfiguration RedisStreamSink(this LoggerSinkConfiguration loggerConfiguration,
-        RedisStreamSinkSettings settings)
+        IConnectionMultiplexer multiplexer, IOptions<RedisStreamSinkSettings> options)
     {
-        var multiplexer = ConnectionMultiplexer.Connect(settings.ConnectionString);
-        return loggerConfiguration.Sink(new RedisStreamSerilogSink(multiplexer));
+        return loggerConfiguration.Sink(new RedisStreamSerilogSink(multiplexer, options.Value));
     }
 }
