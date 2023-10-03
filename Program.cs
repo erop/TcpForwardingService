@@ -4,6 +4,7 @@ using Serilog;
 using StackExchange.Redis;
 using TcpForwardingService;
 using TcpForwardingService.Configuration;
+using TcpForwardingService.Logging;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((hostContext, services) =>
@@ -42,7 +43,14 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<TcpWritersPool>();
 
     })
-    .UseSerilog()
+    .UseSerilog((context, provider, loggerConfiguration) =>
+    {
+        loggerConfiguration
+            .ReadFrom.Configuration(context.Configuration)
+            .Enrich.FromLogContext()
+            .WriteTo.RedisStreamSink(provider.GetRequiredService<IConnectionMultiplexer>(),
+                provider.GetRequiredService<IOptions<RedisStreamSinkSettings>>());
+    })
     .Build();
 
 host.Run();
