@@ -1,5 +1,6 @@
 using System.Net;
 using Microsoft.Extensions.Options;
+using Serilog;
 using StackExchange.Redis;
 using TcpForwardingService;
 using TcpForwardingService.Configuration;
@@ -41,6 +42,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<TcpWritersPool>();
 
     })
+    .UseSerilog()
     .Build();
 
 host.Run();
