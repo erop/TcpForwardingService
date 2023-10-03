@@ -19,8 +19,6 @@ public class TcpWritersPool : IDisposable
         _logger = logger;
         _settings = options.Value;
 
-        // https://chat.openai.com/c/06f95145-6b2c-4ff1-9532-4fe8dfbd3d22
-
         foreach (var hostPort in _settings.Destinations)
             if (IPAddress.TryParse(hostPort.Host, out var ipAddress))
             {
@@ -51,6 +49,7 @@ public class TcpWritersPool : IDisposable
     {
         StreamWriter? writer = null;
         TcpClient? client = null;
+        
         try
         {
             client = new TcpClient();
