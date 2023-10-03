@@ -7,6 +7,7 @@
         <UserSecretsId>dotnet-TcpForwardingService-3fcf6d10-83e8-4742-b14e-59dc000fef7f</UserSecretsId>
         <PublishReadyToRun>true</PublishReadyToRun>
         <SelfContained>true</SelfContained>
+        <PublishSingleFile>true</PublishSingleFile>
     </PropertyGroup>
 
     <ItemGroup>
