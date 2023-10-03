@@ -25,29 +25,30 @@ var host = Host.CreateDefaultBuilder(args)
                         IPAddress.TryParse(hostPort.Host, out _) && IsAllowedPort(hostPort.Port));
                 }, "Check destination IP:PORT endpoints!")
             .ValidateOnStart();
-        
+
         services.AddOptions<RedisStreamSinkSettings>()
             .BindConfiguration(RedisStreamSinkSettings.Section)
-            .Validate(settings => !string.IsNullOrWhiteSpace(settings.ConnectionString), "Check Redis connection string!")
+            .Validate(settings => !string.IsNullOrWhiteSpace(settings.ConnectionString),
+                "Check Redis connection string!")
             .Validate(settings => !string.IsNullOrWhiteSpace(settings.StreamName), "Check Redis stream name!")
             .ValidateOnStart();
 
         services.AddHostedService<Worker>();
         services.AddWindowsService(options => options.ServiceName = "TcpForwardingService");
-        
+
         services.AddSingleton<IConnectionMultiplexer>(sp =>
         {
             var settings = sp.GetRequiredService<IOptions<RedisStreamSinkSettings>>().Value;
             return ConnectionMultiplexer.Connect(settings.ConnectionString);
         });
         services.AddSingleton<TcpWritersPool>();
-
     })
     .UseSerilog((context, provider, loggerConfiguration) =>
     {
         loggerConfiguration
-            .ReadFrom.Configuration(context.Configuration)
+            .MinimumLevel.Debug()
             .Enrich.FromLogContext()
+            .WriteTo.Console()
             .WriteTo.RedisStreamSink(provider.GetRequiredService<IConnectionMultiplexer>(),
                 provider.GetRequiredService<IOptions<RedisStreamSinkSettings>>());
     })
