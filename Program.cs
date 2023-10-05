@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.Extensions.Options;
 using Serilog;
+using Serilog.Events;
 using Serilog.Sinks.Slack;
 using Serilog.Sinks.Slack.Models;
 using TcpForwardingService;
@@ -37,6 +38,9 @@ var host = Host.CreateDefaultBuilder(args)
     .UseSerilog((context, provider, loggerConfiguration) =>
     {
         var slackSettings = provider.GetRequiredService<IOptions<SlackChannelSettings>>().Value;
+        var slackLogLevel = LogEventLevel.Information;
+        if (Enum.TryParse(slackSettings.MinimumLogLevel, out LogEventLevel minimumLogLevel))
+            slackLogLevel = minimumLogLevel;
         loggerConfiguration
             .MinimumLevel.Debug()
             .Enrich.FromLogContext()
@@ -45,7 +49,8 @@ var host = Host.CreateDefaultBuilder(args)
             {
                 CustomChannel = slackSettings.ChannelName,
                 CustomUserName = slackSettings.UserName,
-                WebHookUrl = slackSettings.WebHookUrl.ToString()
+                WebHookUrl = slackSettings.WebHookUrl.ToString(),
+                MinimumLogEventLevel = slackLogLevel
             });
     })
     .Build();

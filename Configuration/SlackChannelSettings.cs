@@ -6,4 +6,5 @@ public class SlackChannelSettings
    public required Uri WebHookUrl { get; set; }
    public required string ChannelName { get; set; }
    public required string UserName { get; set; }
+   public required string MinimumLogLevel { get; set; }
 }
