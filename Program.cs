@@ -1,10 +1,10 @@
 using System.Net;
 using Microsoft.Extensions.Options;
 using Serilog;
-using StackExchange.Redis;
+using Serilog.Sinks.Slack;
+using Serilog.Sinks.Slack.Models;
 using TcpForwardingService;
 using TcpForwardingService.Configuration;
-using TcpForwardingService.Logging;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((hostContext, services) =>
@@ -26,31 +26,27 @@ var host = Host.CreateDefaultBuilder(args)
                 }, "Check destination IP:PORT endpoints!")
             .ValidateOnStart();
 
-        services.AddOptions<RedisStreamSinkSettings>()
-            .BindConfiguration(RedisStreamSinkSettings.Section)
-            .Validate(settings => !string.IsNullOrWhiteSpace(settings.ConnectionString),
-                "Check Redis connection string!")
-            .Validate(settings => !string.IsNullOrWhiteSpace(settings.StreamName), "Check Redis stream name!")
+        services.AddOptions<SlackChannelSettings>()
+            .BindConfiguration(SlackChannelSettings.Section)
             .ValidateOnStart();
 
         services.AddHostedService<Worker>();
         services.AddWindowsService(options => options.ServiceName = "TcpForwardingService");
-
-        services.AddSingleton<IConnectionMultiplexer>(sp =>
-        {
-            var settings = sp.GetRequiredService<IOptions<RedisStreamSinkSettings>>().Value;
-            return ConnectionMultiplexer.Connect(settings.ConnectionString);
-        });
         services.AddSingleton<TcpWritersPool>();
     })
     .UseSerilog((context, provider, loggerConfiguration) =>
     {
+        var slackSettings = provider.GetRequiredService<IOptions<SlackChannelSettings>>().Value;
         loggerConfiguration
             .MinimumLevel.Debug()
             .Enrich.FromLogContext()
             .WriteTo.Console()
-            .WriteTo.RedisStreamSink(provider.GetRequiredService<IConnectionMultiplexer>(),
-                provider.GetRequiredService<IOptions<RedisStreamSinkSettings>>());
+            .WriteTo.Slack(new SlackSinkOptions
+            {
+                CustomChannel = slackSettings.ChannelName,
+                CustomUserName = slackSettings.UserName,
+                WebHookUrl = slackSettings.WebHookUrl.ToString()
+            });
     })
     .Build();
 
