@@ -51,7 +51,17 @@ var host = Host.CreateDefaultBuilder(args)
                 CustomChannel = slackSettings.ChannelName,
                 CustomUserName = slackSettings.UserName,
                 WebHookUrl = slackSettings.WebHookUrl.ToString(),
-                MinimumLogEventLevel = slackLogLevel
+                MinimumLogEventLevel = slackLogLevel,
+                PropertyDenyList = new List<string>
+                {
+                    "Endpoint",
+                    "Error",
+                    "Host",
+                    "Time",
+                    "Message",
+                    "Destination",
+                    "SourceContext"
+                }
             });
     })
     .Build();
