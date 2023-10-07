@@ -37,7 +37,7 @@ public class Worker : BackgroundService
                     _ = ForwardAsync(client, stoppingToken);
 
 
-                    // _logger.LogInformation("Worker running at: {Time}", DateTimeOffset.Now);
+                    _logger.LogInformation("Worker running at: {Time}", DateTimeOffset.Now);
                     await Task.Delay(1000, stoppingToken);
                 }
             }
@@ -67,7 +67,7 @@ public class Worker : BackgroundService
 
                 while (await reader.ReadLineAsync(stoppingToken) is { } message)
                 {
-                    // _logger.LogInformation("[{Time}] {Message}", DateTimeOffset.Now.ToString("u"), message);
+                    _logger.LogInformation("[{Time}] {Message}", DateTimeOffset.Now.ToString("u"), message);
                     foreach (var (key, writer) in _writersPool.GetWriters())
                         if (writer is not null)
                         {
