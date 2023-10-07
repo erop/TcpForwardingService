@@ -58,7 +58,7 @@ public class TcpWritersPool : IDisposable
         }
         catch (Exception e)
         {
-            _logger.LogError("Unable to create writer for destination: '{Endpoint}', Error: '{Error}'",
+            _logger.LogError("Unable to create writer for endpoint: '{Endpoint}', Error: '{Error}'",
                 ipEndPoint.ToString(), e.Message);
         }
 

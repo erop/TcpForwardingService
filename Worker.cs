@@ -47,7 +47,7 @@ public class Worker : BackgroundService
             }
             catch (SocketException e)
             {
-                _logger.LogError("Socket exception: {Message}", e.Message);
+                _logger.LogError(e, "Socket exception: {Message}", e.Message);
                 await Task.Delay(1000, stoppingToken);
             }
             catch (Exception e)
@@ -67,7 +67,7 @@ public class Worker : BackgroundService
 
                 while (await reader.ReadLineAsync(stoppingToken) is { } message)
                 {
-                    _logger.LogInformation("[{Time}] Message: {Message}", DateTimeOffset.Now.ToString("u"), message);
+                    _logger.LogInformation("[{Time}] {Message}", DateTimeOffset.Now.ToString("u"), message);
                     foreach (var (key, writer) in _writersPool.GetWriters())
                         if (writer is not null)
                         {
@@ -79,14 +79,14 @@ public class Worker : BackgroundService
                             catch (Exception e) when (e is SocketException or ObjectDisposedException
                                                           or InvalidOperationException)
                             {
-                                _logger.LogError(
+                                _logger.LogError(e,
                                     "Unable to forward message: '{Message}' to destination '{Destination}'",
                                     e.Message, key.ToString());
                                 ReEstablishConnection(key);
                             }
                             catch (Exception e)
                             {
-                                _logger.LogCritical("Unexpected error occurred while forwarding message: {Message}",
+                                _logger.LogCritical(e, "Unexpected error occurred while forwarding message: {Message}",
                                     e.Message);
                                 ReEstablishConnection(key);
                             }
@@ -101,7 +101,7 @@ public class Worker : BackgroundService
         }
         catch (Exception e)
         {
-            _logger.LogError("Unable to forward: {Message}", e.Message);
+            _logger.LogError(e, "Unable to forward: {Message}", e.Message);
         }
     }
 
