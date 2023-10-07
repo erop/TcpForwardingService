@@ -42,8 +42,9 @@ var host = Host.CreateDefaultBuilder(args)
         if (Enum.TryParse(slackSettings.MinimumLogLevel, out LogEventLevel minimumLogLevel))
             slackLogLevel = minimumLogLevel;
         loggerConfiguration
-            .MinimumLevel.Debug()
+            .ReadFrom.Configuration(context.Configuration)
             .Enrich.FromLogContext()
+            .MinimumLevel.Debug()
             .WriteTo.Console()
             .WriteTo.Slack(new SlackSinkOptions
             {
