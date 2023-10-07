@@ -29,10 +29,11 @@ var host = Host.CreateDefaultBuilder(args)
 
         services.AddOptions<SlackChannelSettings>()
             .BindConfiguration(SlackChannelSettings.Section)
-            .Validate(settings => settings.WebHookUrl.IsAbsoluteUri
+            .Validate(settings => !string.IsNullOrWhiteSpace(settings.WebHookUrl)
                                   && !string.IsNullOrWhiteSpace(settings.ChannelName)
                                   && !string.IsNullOrWhiteSpace(settings.UserName)
-                                  && Enum.TryParse(settings.MinimumLogLevel, out LogEventLevel _))
+                                  && Enum.TryParse(settings.MinimumLogLevel, out LogEventLevel _),
+                "Check Slack settings!")
             .ValidateOnStart();
 
         services.AddHostedService<Worker>();
@@ -54,7 +55,7 @@ var host = Host.CreateDefaultBuilder(args)
             {
                 CustomChannel = slackSettings.ChannelName,
                 CustomUserName = slackSettings.UserName,
-                WebHookUrl = slackSettings.WebHookUrl.ToString(),
+                WebHookUrl = slackSettings.WebHookUrl,
                 MinimumLogEventLevel = slackLogLevel,
                 PropertyDenyList = new List<string>
                 {
