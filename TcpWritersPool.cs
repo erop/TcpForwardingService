@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Net;
 using System.Net.Sockets;
@@ -9,10 +10,10 @@ namespace TcpForwardingService;
 
 public class TcpWritersPool : IDisposable
 {
-    private readonly Dictionary<IPEndPoint, TcpClient?> _clients = new();
+    private readonly ConcurrentDictionary<IPEndPoint, TcpClient?> _clients = new();
     private readonly ILogger<TcpWritersPool> _logger;
     private readonly DestinationsSettings _settings;
-    private readonly Dictionary<IPEndPoint, StreamWriter?> _writers = new();
+    private readonly ConcurrentDictionary<IPEndPoint, StreamWriter?> _writers = new();
 
     public TcpWritersPool(IOptions<DestinationsSettings> options, ILogger<TcpWritersPool> logger)
     {
